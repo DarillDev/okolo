@@ -1,10 +1,11 @@
-@import "tailwindcss";
-
-// Load DS global CSS — themes emit CSS custom properties to the DOM.
-// These @use statements must appear here and nowhere else.
+// Sass @use must precede all other rules (including @import)
 @use '../styles/ds/themes/base';
 @use '../styles/ds/themes/dark';
 @use '../styles/ds/themes/light';
+
+// Load DS global CSS — themes emit CSS custom properties to the DOM.
+// These @use statements must appear here and nowhere else.
+@import "tailwindcss";
 
 body {
   font-family: var(--font-body);
