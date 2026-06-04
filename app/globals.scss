@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+// Load DS global CSS — themes emit CSS custom properties to the DOM.
+// These @use statements must appear here and nowhere else.
+@use '../styles/ds/themes/base';
+@use '../styles/ds/themes/dark';
+@use '../styles/ds/themes/light';
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+}
