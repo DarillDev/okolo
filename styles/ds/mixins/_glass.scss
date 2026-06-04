@@ -1,0 +1,6 @@
+@mixin glass($blur: 24px, $saturate: 140%) {
+  background: var(--color-surface);
+  backdrop-filter: blur(#{$blur}) saturate(#{$saturate});
+  -webkit-backdrop-filter: blur(#{$blur}) saturate(#{$saturate});
+  border: 1px solid var(--color-border);
+}
