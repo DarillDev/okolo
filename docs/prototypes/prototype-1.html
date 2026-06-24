@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>okolo-auto · 01 neon cartograph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080d;
+    --bg-2: #0b0c13;
+    --ink: #eef0f8;
+    --ink-dim: #9aa0b8;
+    --ink-mute: #60657d;
+    --line: rgba(255,255,255,0.07);
+    --glass: rgba(18,20,32,0.58);
+    --glass-hi: rgba(255,255,255,0.05);
+    --green: #58e39f;
+    --amber: #ffc266;
+    --red: #ff6b8a;
+    --blue: #6cb9ff;
+    --violet: #b48bff;
+    --radius: 22px;
+  }
+  *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Onest', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+  }
+  button, input { font-family: inherit; color: inherit; }
+
+  /* ===== Map canvas ===== */
+  .map {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(1200px 800px at 18% 22%, rgba(76,119,255,0.10), transparent 60%),
+      radial-gradient(1000px 700px at 82% 78%, rgba(120,210,255,0.07), transparent 55%),
+      linear-gradient(180deg, #0a0c14 0%, #08090f 100%);
+    overflow: hidden;
+  }
+  .map::before {
+    /* fine grid */
+    content: '';
+    position: absolute; inset: -20%;
+    background-image:
+      linear-gradient(rgba(120,160,220,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,160,220,0.035) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(80% 70% at 50% 50%, #000 40%, transparent 100%);
+  }
+  /* river arc */
+  .river {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+  .river svg { width: 100%; height: 100%; }
+  .river path.water {
+    stroke: rgba(94,150,255,0.22);
+    stroke-width: 70;
+    fill: none;
+    filter: blur(6px);
+  }
+  .river path.water-core {
+    stroke: rgba(94,150,255,0.55);
+    stroke-width: 2;
+    fill: none;
+    stroke-dasharray: 4 6;
+  }
+  .roads {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+  .roads svg { width: 100%; height: 100%; }
+  .roads path {
+    stroke: rgba(255,255,255,0.06);
+    stroke-width: 1.2;
+    fill: none;
+  }
+  .roads path.major {
+    stroke: rgba(180,210,255,0.12);
+    stroke-width: 1.6;
+  }
+
+  /* ===== Map markers ===== */
+  .marker {
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 5;
+  }
+  .marker .dot {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(12,14,22,0.9);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.15),
+      0 8px 20px -4px rgba(0,0,0,0.6);
+  }
+  .marker::before {
+    content: '';
+    position: absolute; inset: -18px;
+    border-radius: 50%;
+    filter: blur(12px);
+    opacity: 0.65;
+    z-index: -1;
+  }
+  .marker.good .dot { background: var(--green); }
+  .marker.good::before { background: radial-gradient(circle, rgba(88,227,159,0.85), transparent 70%); }
+  .marker.mid .dot { background: var(--amber); }
+  .marker.mid::before { background: radial-gradient(circle, rgba(255,194,102,0.75), transparent 70%); }
+  .marker.bad .dot { background: var(--red); }
+  .marker.bad::before { background: radial-gradient(circle, rgba(255,107,138,0.85), transparent 70%); }
+
+  .marker .pulse {
+    position: absolute; inset: -6px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    opacity: 0;
+    animation: pulse 2.6s ease-out infinite;
+  }
+  .marker.good { color: var(--green); }
+  .marker.mid  { color: var(--amber); }
+  .marker.bad  { color: var(--red); }
+  @keyframes pulse {
+    0% { transform: scale(0.8); opacity: 0.8; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+
+  .marker.me {
+    width: 22px; height: 22px;
+    color: var(--blue);
+  }
+  .marker.me .dot {
+    background: radial-gradient(circle at 30% 30%, #bcd9ff, var(--blue));
+    border: 3px solid rgba(12,14,22,0.9);
+  }
+  .marker.me::before {
+    background: radial-gradient(circle, rgba(108,185,255,0.65), transparent 70%);
+    inset: -22px;
+  }
+  .marker.me .ring {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    border: 1px dashed rgba(108,185,255,0.35);
+    transform: translate(-50%,-50%);
+    background: radial-gradient(circle, rgba(108,185,255,0.05), transparent 70%);
+  }
+
+  /* ===== Top search bar ===== */
+  .top-bar {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    width: min(860px, calc(100% - 160px));
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .search {
+    flex: 1;
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 10px 10px 22px;
+    background: var(--glass);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.6),
+      0 2px 0 0 rgba(255,255,255,0.04) inset,
+      0 -1px 0 0 rgba(0,0,0,0.4) inset;
+  }
+  .search svg { flex-shrink: 0; opacity: 0.7; }
+  .search input {
+    flex: 1;
+    background: transparent;
+    border: 0; outline: 0;
+    font-size: 16px;
+    padding: 12px 0;
+    font-weight: 500;
+  }
+  .search input::placeholder { color: var(--ink-mute); font-weight: 400; }
+  .search .kbd {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    color: var(--ink-mute);
+  }
+  .search .mic {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--violet), var(--blue));
+    display: grid; place-items: center;
+    border: 0; cursor: pointer;
+    color: #0a0c14;
+    box-shadow: 0 8px 24px -4px rgba(108,185,255,0.45);
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px;
+    background: var(--glass);
+    backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: -0.02em;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .logo .logo-mark {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: conic-gradient(from 210deg, var(--green), var(--amber), var(--red), var(--green));
+    position: relative;
+  }
+  .logo .logo-mark::after {
+    content: '';
+    position: absolute; inset: 5px;
+    background: #0c0e16;
+    border-radius: 50%;
+  }
+
+  .profile-btn {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--glass);
+    backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    display: grid; place-items: center;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+
+  /* ===== Filter chips row ===== */
+  .chips {
+    position: fixed;
+    top: 94px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 35;
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    max-width: calc(100% - 48px);
+    padding: 4px;
+  }
+  .chip {
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--line);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 12px 30px -12px rgba(0,0,0,0.6);
+    transition: transform .2s, border-color .2s;
+  }
+  .chip:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.18); }
+  .chip.active {
+    background: linear-gradient(135deg, rgba(108,185,255,0.18), rgba(180,139,255,0.18));
+    border-color: rgba(108,185,255,0.5);
+    color: var(--ink);
+    box-shadow:
+      0 12px 30px -8px rgba(108,185,255,0.3),
+      0 0 0 1px rgba(108,185,255,0.25) inset;
+  }
+  .chip .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .chip .dot.g { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .chip .dot.y { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+  .chip .dot.r { background: var(--red); box-shadow: 0 0 10px var(--red); }
+
+  /* ===== Left rail actions ===== */
+  .rail {
+    position: fixed;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: var(--glass);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .rail button {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    background: transparent;
+    border: 0; cursor: pointer;
+    display: grid; place-items: center;
+    color: var(--ink-dim);
+    transition: background .2s, color .2s;
+  }
+  .rail button:hover { background: rgba(255,255,255,0.05); color: var(--ink); }
+  .rail button.active {
+    background: linear-gradient(135deg, rgba(88,227,159,0.22), rgba(108,185,255,0.18));
+    color: var(--ink);
+    box-shadow: 0 0 0 1px rgba(88,227,159,0.3) inset;
+  }
+  .rail hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 4px 6px;
+  }
+
+  /* ===== Right FAB stack ===== */
+  .fab-stack {
+    position: fixed;
+    right: 24px;
+    bottom: 360px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .fab {
+    width: 56px; height: 56px;
+    border-radius: 18px;
+    background: var(--glass);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    display: grid; place-items: center;
+    color: var(--ink);
+    box-shadow: 0 20px 40px -12px rgba(0,0,0,0.6);
+    transition: transform .2s;
+  }
+  .fab:hover { transform: translateY(-2px); }
+  .fab.primary {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, #6cb9ff, #b48bff 60%, #ff7bde);
+    color: #08090f;
+    border: 0;
+    box-shadow:
+      0 20px 50px -10px rgba(108,185,255,0.55),
+      0 0 0 4px rgba(108,185,255,0.1);
+  }
+  .fab.primary::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 22px;
+    border: 1px solid rgba(108,185,255,0.35);
+    animation: breathe 3s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%,100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.08); opacity: 0.2; }
+  }
+  .fab.primary { position: relative; }
+
+  /* ===== Radius selector ===== */
+  .radius {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    padding: 16px 12px;
+    background: var(--glass);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .radius-title {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    padding: 0 8px 10px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .radius button {
+    background: transparent;
+    border: 0; cursor: pointer;
+    color: var(--ink-dim);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    min-width: 52px;
+  }
+  .radius button:hover { background: rgba(255,255,255,0.04); color: var(--ink); }
+  .radius button.active {
+    background: linear-gradient(135deg, rgba(108,185,255,0.2), rgba(180,139,255,0.15));
+    color: var(--ink);
+    box-shadow: 0 0 0 1px rgba(108,185,255,0.35) inset;
+  }
+
+  /* ===== Bottom sheet ===== */
+  .sheet {
+    position: fixed;
+    left: 24px; right: 24px;
+    bottom: 24px;
+    z-index: 25;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 12px;
+    height: 320px;
+  }
+  .panel {
+    background: var(--glass);
+    backdrop-filter: blur(28px) saturate(140%);
+    -webkit-backdrop-filter: blur(28px) saturate(140%);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 40px 80px -30px rgba(0,0,0,0.8),
+      0 1px 0 0 rgba(255,255,255,0.05) inset;
+  }
+  .panel::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(400px 200px at 100% 0%, rgba(108,185,255,0.08), transparent 60%),
+      radial-gradient(400px 200px at 0% 100%, rgba(180,139,255,0.06), transparent 60%);
+  }
+  .panel > * { position: relative; }
+
+  .service-card .eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 12px;
+  }
+  .service-card .eyebrow .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 10px var(--red);
+  }
+  .service-card h2 {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 500;
+    font-size: 26px;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 6px;
+  }
+  .service-card .addr {
+    font-size: 13px; color: var(--ink-dim);
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 20px;
+  }
+  .service-card .rating-row {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 16px;
+  }
+  .rating-big {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 600;
+    font-size: 44px;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, var(--red) 0%, var(--amber) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .rating-meta { font-size: 13px; color: var(--ink-dim); }
+  .rating-meta strong { color: var(--ink); font-weight: 600; }
+  .pills {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .pills .p {
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+    background: rgba(255,107,138,0.12);
+    color: #ffa3b6;
+    border: 1px solid rgba(255,107,138,0.25);
+  }
+  .pills .p.warn {
+    background: rgba(255,194,102,0.12);
+    color: #ffd69b;
+    border-color: rgba(255,194,102,0.25);
+  }
+  .card-actions { display: flex; gap: 8px; position: absolute; bottom: 22px; left: 22px; right: 22px; }
+  .btn {
+    padding: 12px 18px;
+    border-radius: 14px;
+    border: 0; cursor: pointer;
+    font-weight: 600; font-size: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    justify-content: center;
+  }
+  .btn.primary {
+    background: linear-gradient(135deg, #eef0f8 0%, #b8bbce 100%);
+    color: #0a0c14;
+    flex: 1;
+  }
+  .btn.ghost {
+    background: rgba(255,255,255,0.04);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+
+  /* review preview */
+  .reviews h3 {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 16px;
+  }
+  .review {
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .review:first-of-type { border-top: 0; padding-top: 0; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 600;
+    background: linear-gradient(135deg, #2a2f45, #1a1d2a);
+    border: 1px solid var(--line);
+  }
+  .avatar.v {
+    background: linear-gradient(135deg, rgba(88,227,159,0.2), rgba(108,185,255,0.2));
+    color: var(--green);
+    border-color: rgba(88,227,159,0.3);
+  }
+  .review-body .who {
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 2px;
+  }
+  .review-body .who svg { color: var(--green); }
+  .review-body .txt {
+    font-size: 13px;
+    color: var(--ink-dim);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .review-body .txt mark {
+    background: rgba(255,107,138,0.15);
+    color: #ffcad3;
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
+  .review-score {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  .review-score.bad { color: var(--red); }
+  .review-score.mid { color: var(--amber); }
+
+  /* stats panel */
+  .stats .stats-head {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 16px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .stat {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line);
+  }
+  .stat .label { font-size: 11px; color: var(--ink-mute); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .stat .value {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .stat .sub { font-size: 12px; color: var(--ink-dim); }
+  .stat.danger .value { color: var(--red); }
+  .stat.warn .value { color: var(--amber); }
+  .stat.good .value { color: var(--green); }
+
+  .dyn-chart {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line);
+  }
+  .dyn-chart .label { font-size: 11px; color: var(--ink-mute); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+  .spark { height: 46px; }
+  .spark svg { width: 100%; height: 100%; }
+
+  /* ===== Branding / bottom nav dots ===== */
+  .attribution {
+    position: fixed;
+    bottom: 12px; right: 50%;
+    transform: translateX(50%);
+    z-index: 20;
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* scale-to-fit for smaller screens */
+  @media (max-height: 820px) {
+    .sheet { height: 280px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- MAP -->
+  <div class="map">
+    <div class="river">
+      <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+        <path class="water" d="M -50 420 Q 300 350, 560 460 T 1100 500 T 1700 440" />
+        <path class="water-core" d="M -50 420 Q 300 350, 560 460 T 1100 500 T 1700 440" />
+      </svg>
+    </div>
+    <div class="roads">
+      <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+        <path class="major" d="M 0 180 L 1600 200" />
+        <path class="major" d="M 0 620 L 1600 600" />
+        <path class="major" d="M 320 0 L 380 900" />
+        <path class="major" d="M 980 0 L 1040 900" />
+        <path d="M 0 280 L 1600 290" />
+        <path d="M 0 360 L 1600 360" />
+        <path d="M 0 720 L 1600 740" />
+        <path d="M 180 0 L 200 900" />
+        <path d="M 620 0 L 660 900" />
+        <path d="M 780 0 L 810 900" />
+        <path d="M 1260 0 L 1320 900" />
+        <path d="M 1440 0 L 1480 900" />
+        <path d="M 0 90 Q 400 120 800 110 T 1600 140" />
+      </svg>
+    </div>
+
+    <!-- markers -->
+    <div class="marker me" style="left:36%; top:58%">
+      <div class="ring"></div>
+      <div class="dot"></div>
+      <div class="pulse"></div>
+    </div>
+
+    <div class="marker bad" style="left:28%; top:38%"><div class="dot"></div><div class="pulse"></div></div>
+    <div class="marker bad" style="left:44%; top:72%"><div class="dot"></div><div class="pulse"></div></div>
+    <div class="marker mid" style="left:22%; top:62%"><div class="dot"></div></div>
+    <div class="marker mid" style="left:52%; top:46%"><div class="dot"></div></div>
+    <div class="marker mid" style="left:68%; top:70%"><div class="dot"></div></div>
+    <div class="marker good" style="left:30%; top:52%"><div class="dot"></div></div>
+    <div class="marker good" style="left:48%; top:62%"><div class="dot"></div></div>
+    <div class="marker good" style="left:60%; top:40%"><div class="dot"></div></div>
+    <div class="marker good" style="left:72%; top:52%"><div class="dot"></div></div>
+    <div class="marker good" style="left:40%; top:30%"><div class="dot"></div></div>
+    <div class="marker bad" style="left:82%; top:38%"><div class="dot"></div><div class="pulse"></div></div>
+    <div class="marker mid" style="left:14%; top:44%"><div class="dot"></div></div>
+    <div class="marker good" style="left:88%; top:66%"><div class="dot"></div></div>
+  </div>
+
+  <!-- TOP -->
+  <div class="top-bar">
+    <div class="logo">
+      <div class="logo-mark"></div>
+      okolo<span style="opacity:.5">.auto</span>
+    </div>
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M20 20L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <input placeholder="Шиномонтаж рядом, кузовной для BMW, район Свердловский…" />
+      <span class="kbd">⌘ K</span>
+      <button class="mic" aria-label="Голосовой поиск">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <button class="profile-btn" aria-label="Профиль">СЧ</button>
+  </div>
+
+  <!-- CHIPS -->
+  <div class="chips">
+    <div class="chip active"><span class="dot g"></span>Все рейтинги</div>
+    <div class="chip"><span class="dot r"></span>Только предупреждения</div>
+    <div class="chip">Сервис</div>
+    <div class="chip">Шиномонтаж</div>
+    <div class="chip">Кузовной</div>
+    <div class="chip">Мойка</div>
+    <div class="chip">Автоподбор</div>
+    <div class="chip">Эвакуатор</div>
+    <div class="chip">🚗 Моя марка · Kia</div>
+    <div class="chip">Открыто сейчас</div>
+    <div class="chip">Онлайн-запись</div>
+  </div>
+
+  <!-- LEFT RAIL -->
+  <aside class="rail">
+    <button class="active" aria-label="Карта">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" stroke="currentColor" stroke-width="1.6"/><path d="M9 3v15M15 6v15" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+    <button aria-label="Список">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <button aria-label="Тикеты">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7z" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+    <hr>
+    <button aria-label="Фильтры">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button aria-label="Слои">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+  </aside>
+
+  <!-- RADIUS -->
+  <aside class="radius">
+    <div class="radius-title">радиус</div>
+    <button>1км</button>
+    <button class="active">3км</button>
+    <button>5км</button>
+    <button>10км</button>
+  </aside>
+
+  <!-- RIGHT FAB STACK -->
+  <div class="fab-stack">
+    <button class="fab" aria-label="Увеличить">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button class="fab" aria-label="Уменьшить">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button class="fab primary" aria-label="Найти рядом">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- BOTTOM SHEET -->
+  <section class="sheet">
+
+    <!-- Service card -->
+    <div class="panel service-card">
+      <div class="eyebrow">
+        <span class="dot"></span> Выбрано · выше по ленте отзывов предупреждения
+      </div>
+      <h2>АвтоТехЦентр<br>«Тополь»</h2>
+      <div class="addr">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-7.5-7-12a7 7 0 1 1 14 0c0 4.5-7 12-7 12z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>
+        ул. Байкальская, 206/5 · 1.2 км от вас
+      </div>
+
+      <div class="rating-row">
+        <div class="rating-big">2.8</div>
+        <div class="rating-meta">
+          <div>из <strong>127 отзывов</strong></div>
+          <div style="color:var(--red)">↓ 0.9 за 3 месяца</div>
+        </div>
+      </div>
+
+      <div class="pills">
+        <span class="p">«развели на деньги» × 4</span>
+        <span class="p warn">цена выросла 2×</span>
+        <span class="p">не решили проблему</span>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn primary">
+          Читать 127 отзывов
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn ghost" aria-label="Сохранить">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke="currentColor" stroke-width="1.6"/></svg>
+        </button>
+        <button class="btn ghost" aria-label="Поделиться">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Reviews preview -->
+    <div class="panel reviews">
+      <h3>Свежие предупреждения</h3>
+
+      <div class="review">
+        <div class="avatar v">МП</div>
+        <div class="review-body">
+          <div class="who">Михаил П. <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="color:var(--ink-mute);font-weight:400;margin-left:4px">2 дня назад · Kia Rio</span></div>
+          <div class="txt">Приехал на замену стойки — <mark>насчитали замену всего рычага</mark>, при этом деталь оригинала не поставили. Чек не дали, расписка от руки.</div>
+        </div>
+        <div class="review-score bad">1.0</div>
+      </div>
+
+      <div class="review">
+        <div class="avatar">АС</div>
+        <div class="review-body">
+          <div class="who">Анна С. <span style="color:var(--ink-mute);font-weight:400;margin-left:4px">4 дня · Hyundai Solaris</span></div>
+          <div class="txt">Три раза возвращалась — стук так и не ушёл. На четвёртый раз сказали что <mark>«так и должно быть»</mark>. В итоге уехала в другой сервис.</div>
+        </div>
+        <div class="review-score bad">2.0</div>
+      </div>
+
+      <div class="review">
+        <div class="avatar">ДК</div>
+        <div class="review-body">
+          <div class="who">Дмитрий К. <span style="color:var(--ink-mute);font-weight:400;margin-left:4px">1 неделя · Toyota Camry</span></div>
+          <div class="txt">Обещали на 2 часа — машина простояла весь день. По цене плюс 4 000 ₽ к названной изначально.</div>
+        </div>
+        <div class="review-score mid">3.0</div>
+      </div>
+    </div>
+
+    <!-- Stats panel -->
+    <div class="panel stats">
+      <div class="stats-head">Статистика района</div>
+      <div class="stats-grid">
+        <div class="stat good">
+          <div class="label">В пределах 3 км</div>
+          <div class="value">47 <span class="sub">сервис.</span></div>
+        </div>
+        <div class="stat warn">
+          <div class="label">Средний рейтинг</div>
+          <div class="value">3.6 <span class="sub">/ 5</span></div>
+        </div>
+        <div class="stat">
+          <div class="label">Открыто сейчас</div>
+          <div class="value">19</div>
+        </div>
+        <div class="stat danger">
+          <div class="label">Жалобы за 3 мес</div>
+          <div class="value">32</div>
+        </div>
+      </div>
+
+      <div class="dyn-chart">
+        <div class="label">Динамика рейтинга · «Тополь»</div>
+        <div class="spark">
+          <svg viewBox="0 0 300 46" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sg" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#58e39f"/>
+                <stop offset="0.5" stop-color="#ffc266"/>
+                <stop offset="1" stop-color="#ff6b8a"/>
+              </linearGradient>
+              <linearGradient id="sgf" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ff6b8a" stop-opacity="0.4"/>
+                <stop offset="1" stop-color="#ff6b8a" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0 10 L30 12 L60 8 L90 14 L120 16 L150 18 L180 26 L210 30 L240 36 L270 40 L300 42 L300 46 L0 46 Z" fill="url(#sgf)"/>
+            <path d="M0 10 L30 12 L60 8 L90 14 L120 16 L150 18 L180 26 L210 30 L240 36 L270 40 L300 42" stroke="url(#sg)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="attribution">01 — neon cartograph · okolo.auto</div>
+
+</body>
+</html>

@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>okolo-auto · 02 material sunrise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4efe6;
+    --bg-2: #ede6d8;
+    --paper: #fbf7ee;
+    --ink: #1d1a14;
+    --ink-dim: #65605a;
+    --ink-mute: #96908a;
+    --line: rgba(20,15,10,0.08);
+    --accent: #ff5a3d;      /* coral */
+    --accent-2: #ffb34a;    /* honey */
+    --accent-3: #3a8b7b;    /* jade */
+    --green: #2f9d60;
+    --amber: #e68c2b;
+    --red:   #d93b47;
+    --radius: 26px;
+    --shadow-soft:
+      0 2px 6px rgba(58,30,10,0.04),
+      0 12px 28px -8px rgba(58,30,10,0.10),
+      0 28px 60px -20px rgba(58,30,10,0.14);
+    --shadow-lift:
+      0 1px 2px rgba(58,30,10,0.06),
+      0 8px 18px -6px rgba(58,30,10,0.10),
+      0 24px 50px -18px rgba(58,30,10,0.18);
+  }
+  *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+  button, input { font-family: inherit; color: inherit; }
+
+  /* ===== Map canvas (soft warm paper) ===== */
+  .map {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(1200px 700px at 20% 15%, #fff1d9 0%, transparent 60%),
+      radial-gradient(1000px 700px at 85% 90%, #ffe2dc 0%, transparent 55%),
+      radial-gradient(800px 600px at 55% 55%, #f8ede0 0%, transparent 60%),
+      var(--bg);
+    overflow: hidden;
+  }
+  .map::after {
+    /* grain */
+    content:'';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.95' numOctaves='2' seed='4'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+    opacity: 0.08;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+  .map::before {
+    content: '';
+    position: absolute; inset: -20%;
+    background-image:
+      linear-gradient(rgba(58,30,10,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(58,30,10,0.035) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(80% 70% at 50% 50%, #000 50%, transparent 100%);
+  }
+
+  /* river as soft jade ribbon */
+  .river, .roads, .parks {
+    position: absolute; inset: 0; pointer-events: none;
+  }
+  .river svg, .roads svg, .parks svg { width: 100%; height: 100%; }
+
+  .river path.water {
+    stroke: rgba(58,139,123,0.35);
+    stroke-width: 74;
+    fill: none;
+    filter: blur(0.5px);
+    stroke-linecap: round;
+  }
+  .river path.water-edge {
+    stroke: rgba(58,139,123,0.55);
+    stroke-width: 1.4;
+    fill: none;
+    stroke-dasharray: 3 8;
+  }
+
+  .parks circle, .parks ellipse {
+    fill: rgba(58,139,123,0.16);
+  }
+
+  .roads path {
+    stroke: #ece3d1;
+    stroke-width: 8;
+    fill: none;
+    stroke-linecap: round;
+  }
+  .roads path.major {
+    stroke: #fff6e2;
+    stroke-width: 14;
+  }
+  .roads path.thin {
+    stroke: #efe7d4;
+    stroke-width: 3;
+  }
+
+  /* ===== Markers — soft plump pins ===== */
+  .marker {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    cursor: pointer;
+    z-index: 6;
+    filter: drop-shadow(0 10px 14px rgba(30,15,5,0.18));
+  }
+  .marker .shape {
+    width: 42px; height: 42px;
+    border-radius: 50% 50% 50% 6px;
+    transform: rotate(-45deg);
+    display: grid; place-items: center;
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+    border: 3px solid #fbf7ee;
+  }
+  .marker .shape span { transform: rotate(45deg); display: block; }
+  .marker.good .shape { background: linear-gradient(135deg, #4fc98b, #2f9d60); }
+  .marker.mid .shape  { background: linear-gradient(135deg, #ffc66a, #e68c2b); }
+  .marker.bad .shape  { background: linear-gradient(135deg, #ff7a8a, #d93b47); }
+  .marker .halo {
+    position: absolute;
+    left: 50%; top: 100%;
+    width: 120px; height: 40px;
+    transform: translate(-50%, -100%);
+    border-radius: 50%;
+    filter: blur(18px);
+    z-index: -1;
+    opacity: 0.45;
+  }
+  .marker.good .halo { background: #2f9d60; }
+  .marker.mid .halo  { background: #e68c2b; }
+  .marker.bad .halo  { background: #d93b47; }
+
+  .marker.small .shape { width: 26px; height: 26px; font-size: 0; border-width: 2.5px; }
+  .marker.small .shape span { display: none; }
+
+  .marker.me {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff, #3b7fff);
+    border: 4px solid #fbf7ee;
+    box-shadow: 0 10px 24px -6px rgba(59,127,255,0.55);
+    transform: translate(-50%,-50%);
+  }
+  .marker.me::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59,127,255,0.18), transparent 55%);
+    transform: translate(-50%,-50%);
+    z-index: -1;
+  }
+  .marker.me::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(59,127,255,0.4);
+    transform: translate(-50%,-50%);
+    z-index: -1;
+    animation: spin 40s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: translate(-50%,-50%) rotate(360deg); }
+  }
+
+  /* ===== Top App Bar (Material 3) ===== */
+  .appbar {
+    position: fixed;
+    top: 20px;
+    left: 24px; right: 24px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 22px 14px 18px;
+    background: var(--paper);
+    border-radius: 999px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--line);
+  }
+  .brand-mark {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: conic-gradient(from 160deg, #2f9d60, #e68c2b, #d93b47, #2f9d60);
+    position: relative;
+  }
+  .brand-mark::after {
+    content: ''; position: absolute; inset: 6px;
+    background: var(--paper); border-radius: 50%;
+  }
+  .brand-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+  }
+  .brand-name em { font-style: italic; color: var(--accent); font-weight: 400; }
+
+  .search {
+    flex: 1;
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 10px 10px 24px;
+    background: var(--paper);
+    border-radius: 999px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--line);
+    min-height: 62px;
+  }
+  .search svg.q { opacity: 0.6; }
+  .search input {
+    flex: 1;
+    background: transparent; border: 0; outline: 0;
+    font-size: 17px; font-weight: 500;
+    padding: 10px 0;
+  }
+  .search input::placeholder { color: var(--ink-mute); font-weight: 400; }
+  .search .filter-btn {
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: #fff2df;
+    color: #8a5d18;
+    border: 1px solid #f1dcb3;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .search .cta {
+    padding: 14px 22px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fbf7ee;
+    border: 0; cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+
+  .profile {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffe2dc, #ffd0a3);
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--line);
+    display: grid; place-items: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    color: #6a3a1a;
+    cursor: pointer;
+  }
+
+  /* ===== Category chips on the left, below bar ===== */
+  .chips {
+    position: fixed;
+    left: 24px;
+    top: 110px;
+    z-index: 35;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 520px;
+  }
+  .chip {
+    padding: 12px 18px 12px 14px;
+    border-radius: 999px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font-size: 14px; font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: var(--shadow-soft);
+    transition: transform .2s;
+  }
+  .chip:hover { transform: translateY(-2px); }
+  .chip svg { opacity: 0.6; }
+  .chip .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .chip.danger {
+    background: #fff2f0;
+    color: #b53a2c;
+    border-color: #f7c9c1;
+  }
+  .chip.danger .dot { background: var(--red); box-shadow: 0 0 0 3px rgba(217,59,71,0.15); }
+  .chip.active {
+    background: var(--ink);
+    color: #fbf7ee;
+    border-color: var(--ink);
+  }
+
+  /* ===== Radius dial — floating right ===== */
+  .radius {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    background: var(--paper);
+    border-radius: 28px;
+    padding: 12px;
+    box-shadow: var(--shadow-lift);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 96px;
+  }
+  .radius .head {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-dim);
+    padding: 8px 10px 10px;
+    border-bottom: 1px dashed var(--line);
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .radius button {
+    padding: 14px 10px;
+    border-radius: 18px;
+    border: 0; background: transparent;
+    cursor: pointer;
+    font-weight: 700; font-size: 15px;
+    color: var(--ink-dim);
+    position: relative;
+  }
+  .radius button:hover { background: #f3ecdd; color: var(--ink); }
+  .radius button.active {
+    background: linear-gradient(135deg, #ffd7a3, #ff8f5e);
+    color: #3a1a0a;
+    box-shadow:
+      0 8px 18px -6px rgba(255,143,94,0.55),
+      inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+  .radius button small {
+    display: block;
+    font-weight: 500; font-size: 10px;
+    opacity: 0.7;
+    margin-top: 2px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ===== Zoom controls (right bottom) ===== */
+  .zoom {
+    position: fixed;
+    right: 24px;
+    bottom: 380px;
+    z-index: 30;
+    background: var(--paper);
+    border-radius: 20px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .zoom button {
+    width: 56px; height: 56px;
+    background: transparent;
+    border: 0; cursor: pointer;
+    display: grid; place-items: center;
+    color: var(--ink);
+  }
+  .zoom button + button { border-top: 1px solid var(--line); }
+  .zoom button:hover { background: #f3ecdd; }
+
+  /* ===== Big primary FAB — geolocation ===== */
+  .fab-loc {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(340px + 20px);
+    z-index: 35;
+    height: 68px;
+    padding: 0 30px 0 22px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ff7a5a 0%, #ff5a3d 50%, #e03b58 100%);
+    color: white;
+    border: 0; cursor: pointer;
+    font-weight: 700; font-size: 17px;
+    letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 14px;
+    box-shadow:
+      0 30px 50px -10px rgba(255,90,61,0.45),
+      0 12px 26px -6px rgba(200,40,70,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.5);
+    transition: transform .25s, box-shadow .25s;
+  }
+  .fab-loc:hover { transform: translateX(-50%) translateY(-3px); }
+  .fab-loc .icon-wrap {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.22);
+    display: grid; place-items: center;
+  }
+  .fab-loc::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 999px;
+    border: 2px solid rgba(255,90,61,0.3);
+    animation: ring 2.5s ease-out infinite;
+  }
+  @keyframes ring {
+    0% { transform: scale(0.96); opacity: 0.6; }
+    100% { transform: scale(1.08); opacity: 0; }
+  }
+
+  /* ===== Bottom sheet — Material cards ===== */
+  .sheet {
+    position: fixed;
+    left: 24px; right: 24px;
+    bottom: 24px;
+    z-index: 25;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 0.9fr;
+    gap: 16px;
+    height: 320px;
+  }
+  .panel {
+    background: var(--paper);
+    border-radius: 28px;
+    padding: 26px;
+    border: 1px solid var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  .panel.lift { box-shadow: var(--shadow-lift); }
+  .panel.soft { box-shadow: var(--shadow-soft); }
+
+  /* === featured service card === */
+  .feature {
+    background:
+      radial-gradient(400px 240px at 100% 0%, #ffe2b9, transparent 70%),
+      radial-gradient(400px 300px at 0% 100%, #ffd7cf, transparent 70%),
+      var(--paper);
+    grid-column: 1;
+  }
+  .feature .tag-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  }
+  .badge-warn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px 7px 10px;
+    background: #fff;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+    color: #b53a2c;
+    border: 1px solid #f7c9c1;
+  }
+  .badge-warn .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 0 3px rgba(217,59,71,0.18);
+  }
+  .badge-verified {
+    padding: 7px 12px;
+    background: #ecf8f1;
+    color: #2f7852;
+    border: 1px solid #c7e7d4;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .feature h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 40px;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+  .feature h2 em { font-style: italic; color: var(--accent); }
+  .feature .sub {
+    font-size: 14px; color: var(--ink-dim);
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 18px;
+  }
+  .feature .sub strong { color: var(--ink); font-weight: 700; }
+  .rating-line { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 18px; }
+  .rating-big {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 64px;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    color: var(--red);
+  }
+  .rating-meta { font-size: 13px; color: var(--ink-dim); line-height: 1.5; padding-bottom: 6px; }
+  .rating-meta .delta { color: var(--red); font-weight: 700; }
+  .period-row {
+    display: flex; gap: 8px; padding-bottom: 6px;
+  }
+  .pilot {
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.04);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    font-weight: 600;
+  }
+  .period {
+    display: flex; flex-direction: column;
+    align-items: flex-start;
+  }
+  .period .p-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .period .p-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 20px;
+  }
+  .period.neg .p-value { color: var(--red); }
+  .period.pos .p-value { color: var(--green); }
+  .feature .actions {
+    position: absolute; left: 26px; right: 26px; bottom: 26px;
+    display: flex; gap: 10px;
+  }
+  .btn {
+    height: 52px;
+    padding: 0 22px;
+    border-radius: 16px;
+    border: 0; cursor: pointer;
+    font-weight: 700; font-size: 15px;
+    display: inline-flex; align-items: center; gap: 10px;
+    justify-content: center;
+  }
+  .btn.primary {
+    background: var(--ink);
+    color: #fbf7ee;
+    flex: 1;
+  }
+  .btn.ghost {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    width: 52px; padding: 0;
+  }
+  .btn.ghost:hover { background: #fff; }
+
+  /* === reviews list === */
+  .reviews .title-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .reviews h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500; font-size: 20px;
+    letter-spacing: -0.02em;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 12px;
+  }
+  .tabs button {
+    font-size: 12px; font-weight: 700;
+    padding: 6px 10px; border-radius: 8px;
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+  .tabs button.active { background: #fff; color: var(--ink); box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+
+  .review {
+    padding: 14px 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 14px;
+  }
+  .review:first-of-type { border-top: 0; padding-top: 4px; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 700;
+    background: #f3ecdd;
+    color: #6a3a1a;
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .avatar.v::after {
+    content: '';
+    position: absolute;
+    right: -3px; bottom: -3px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--green);
+    border: 2px solid var(--paper);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M3 6l2 2 4-4' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  .r-who { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .r-meta { font-size: 12px; color: var(--ink-mute); margin-bottom: 6px; }
+  .r-text { font-size: 13px; color: var(--ink-dim); line-height: 1.5; }
+  .r-text mark {
+    background: #ffe2dc;
+    color: #a32e24;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .r-score {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .r-score.bad { color: var(--red); }
+  .r-score.mid { color: var(--amber); }
+  .r-score.good { color: var(--green); }
+
+  /* === nearby list === */
+  .nearby h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500; font-size: 18px;
+    letter-spacing: -0.02em;
+    margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .nearby h3 small {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .nb {
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .nb:first-of-type { border-top: 0; padding-top: 0; }
+  .nb-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .nb-dot.g { background: var(--green); box-shadow: 0 0 0 3px rgba(47,157,96,0.18); }
+  .nb-dot.y { background: var(--amber); box-shadow: 0 0 0 3px rgba(230,140,43,0.18); }
+  .nb-dot.r { background: var(--red);   box-shadow: 0 0 0 3px rgba(217,59,71,0.18); }
+  .nb-name { font-size: 14px; font-weight: 600; margin-bottom: 1px; }
+  .nb-meta { font-size: 12px; color: var(--ink-mute); }
+  .nb-rate {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 17px;
+  }
+
+  .attribution {
+    position: fixed;
+    bottom: 6px;
+    right: 50%;
+    transform: translateX(50%);
+    z-index: 10;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-mute);
+  }
+</style>
+</head>
+<body>
+
+  <!-- MAP -->
+  <div class="map">
+    <div class="river">
+      <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+        <path class="water" d="M -50 460 Q 320 370, 580 480 T 1140 520 T 1700 470" />
+        <path class="water-edge" d="M -50 460 Q 320 370, 580 480 T 1140 520 T 1700 470" />
+      </svg>
+    </div>
+    <div class="parks">
+      <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+        <ellipse cx="220" cy="260" rx="90" ry="60" />
+        <ellipse cx="1320" cy="200" rx="110" ry="80" />
+        <circle cx="800" cy="740" r="60" />
+        <ellipse cx="460" cy="760" rx="70" ry="40" />
+      </svg>
+    </div>
+    <div class="roads">
+      <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+        <path class="major" d="M 0 210 L 1600 230" />
+        <path class="major" d="M 0 640 L 1600 620" />
+        <path class="major" d="M 360 0 L 420 900" />
+        <path class="major" d="M 1020 0 L 1080 900" />
+        <path d="M 0 310 L 1600 310" />
+        <path d="M 0 400 L 1600 400" />
+        <path d="M 0 750 L 1600 770" />
+        <path d="M 200 0 L 220 900" />
+        <path d="M 660 0 L 700 900" />
+        <path d="M 820 0 L 850 900" />
+        <path d="M 1280 0 L 1340 900" />
+        <path class="thin" d="M 0 130 Q 400 160 800 150 T 1600 170" />
+        <path class="thin" d="M 0 520 L 1600 540" />
+        <path class="thin" d="M 0 570 L 1600 590" />
+      </svg>
+    </div>
+
+    <!-- markers -->
+    <div class="marker me" style="left:38%; top:58%"></div>
+
+    <div class="marker small good" style="left:22%; top:52%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small mid" style="left:18%; top:64%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small bad" style="left:24%; top:34%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small good" style="left:48%; top:64%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small good" style="left:60%; top:40%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small good" style="left:70%; top:56%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small mid" style="left:52%; top:46%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small bad" style="left:78%; top:36%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small mid" style="left:80%; top:66%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small good" style="left:44%; top:30%"><div class="shape"></div><div class="halo"></div></div>
+    <div class="marker small good" style="left:88%; top:50%"><div class="shape"></div><div class="halo"></div></div>
+
+    <!-- featured pin (big) -->
+    <div class="marker bad" style="left:44%; top:48%">
+      <div class="shape"><span>2.8</span></div>
+      <div class="halo"></div>
+    </div>
+    <div class="marker good" style="left:66%; top:62%">
+      <div class="shape"><span>4.9</span></div>
+      <div class="halo"></div>
+    </div>
+  </div>
+
+  <!-- APP BAR -->
+  <header class="appbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">okolo<em>.auto</em></div>
+    </div>
+
+    <div class="search">
+      <svg class="q" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M20 20L17 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <input placeholder="Шиномонтаж рядом, кузовной для Kia, улица Байкальская…" />
+      <button class="filter-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Фильтры · 3
+      </button>
+      <button class="cta">
+        Искать
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <button class="profile" aria-label="Профиль">Сч</button>
+  </header>
+
+  <!-- CATEGORY CHIPS -->
+  <div class="chips">
+    <div class="chip active">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 13l2-6h14l2 6M5 13h14v5H5z M7 13v-2m10 2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Все сервисы
+    </div>
+    <div class="chip danger"><span class="dot"></span>Только с предупреждениями</div>
+    <div class="chip">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/></svg>
+      Шиномонтаж
+    </div>
+    <div class="chip">Кузовной</div>
+    <div class="chip">Мойка</div>
+    <div class="chip">Автоподбор</div>
+    <div class="chip">🚗 Моя марка · Kia</div>
+  </div>
+
+  <!-- RADIUS DIAL -->
+  <aside class="radius">
+    <div class="head">радиус</div>
+    <button>1<small>км</small></button>
+    <button class="active">3<small>км</small></button>
+    <button>5<small>км</small></button>
+    <button>10<small>км</small></button>
+  </aside>
+
+  <!-- ZOOM -->
+  <div class="zoom">
+    <button aria-label="Увеличить">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button aria-label="Уменьшить">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- LOCATION FAB -->
+  <button class="fab-loc">
+    <span class="icon-wrap">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    Найти рядом со мной
+  </button>
+
+  <!-- BOTTOM SHEET -->
+  <section class="sheet">
+
+    <!-- FEATURE CARD -->
+    <div class="panel feature lift">
+      <div class="tag-row">
+        <span class="badge-warn"><span class="dot"></span>Высокий уровень жалоб</span>
+        <span class="pilot">пилот · иркутск</span>
+      </div>
+
+      <h2>АвтоТех<em>«Тополь»</em></h2>
+      <div class="sub">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-7.5-7-12a7 7 0 1 1 14 0c0 4.5-7 12-7 12z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>
+        Байкальская, 206/5 · <strong>1.2 км</strong> · открыто до 20:00
+      </div>
+
+      <div class="rating-line">
+        <div class="rating-big">2.8</div>
+        <div class="rating-meta">
+          из <strong>127 отзывов</strong><br>
+          <span class="delta">↓ 0.9</span> за 3 месяца
+        </div>
+        <div class="period-row" style="margin-left:auto">
+          <div class="period neg">
+            <div class="p-label">3 мес</div>
+            <div class="p-value">2.4</div>
+          </div>
+          <div class="period neg">
+            <div class="p-label">6 мес</div>
+            <div class="p-value">3.1</div>
+          </div>
+          <div class="period">
+            <div class="p-label">всё время</div>
+            <div class="p-value">3.7</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary">
+          Читать 127 отзывов
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn ghost" aria-label="Сохранить">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke="currentColor" stroke-width="1.6"/></svg>
+        </button>
+        <button class="btn ghost" aria-label="Позвонить">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 5c0 9 6 15 15 15l2-4-5-2-2 2a13 13 0 0 1-6-6l2-2-2-5-4 2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- REVIEWS -->
+    <div class="panel reviews soft">
+      <div class="title-row">
+        <h3>Свежие отзывы</h3>
+        <div class="tabs">
+          <button>все</button>
+          <button class="active">негативные</button>
+          <button>ответы</button>
+        </div>
+      </div>
+
+      <div class="review">
+        <div class="avatar v">МП</div>
+        <div>
+          <div class="r-who">Михаил П.</div>
+          <div class="r-meta">2 дня назад · Kia Rio</div>
+          <div class="r-text">Приехал на замену стойки — <mark>насчитали замену всего рычага</mark>. Оригинал не поставили, чек от руки.</div>
+        </div>
+        <div class="r-score bad">1.0</div>
+      </div>
+
+      <div class="review">
+        <div class="avatar">АС</div>
+        <div>
+          <div class="r-who">Анна С.</div>
+          <div class="r-meta">4 дня · Hyundai Solaris</div>
+          <div class="r-text">Три раза возвращалась — стук не ушёл. Сказали <mark>«так и должно быть»</mark>.</div>
+        </div>
+        <div class="r-score bad">2.0</div>
+      </div>
+
+      <div class="review">
+        <div class="avatar v">ДК</div>
+        <div>
+          <div class="r-who">Дмитрий К.</div>
+          <div class="r-meta">1 неделя · Camry</div>
+          <div class="r-text">Обещали на 2 часа — простояла весь день. К цене +4 000 ₽ от изначальной.</div>
+        </div>
+        <div class="r-score mid">3.0</div>
+      </div>
+    </div>
+
+    <!-- NEARBY -->
+    <div class="panel nearby soft">
+      <h3>Рядом · 3 км <small>47 всего</small></h3>
+
+      <div class="nb">
+        <div class="nb-dot g"></div>
+        <div>
+          <div class="nb-name">МастерАвто</div>
+          <div class="nb-meta">420 м · шиномонтаж</div>
+        </div>
+        <div class="nb-rate">4.8</div>
+      </div>
+
+      <div class="nb">
+        <div class="nb-dot g"></div>
+        <div>
+          <div class="nb-name">Гараж 38</div>
+          <div class="nb-meta">650 м · сервис</div>
+        </div>
+        <div class="nb-rate">4.6</div>
+      </div>
+
+      <div class="nb">
+        <div class="nb-dot y"></div>
+        <div>
+          <div class="nb-name">СТО «Восток»</div>
+          <div class="nb-meta">1.1 км · кузовной</div>
+        </div>
+        <div class="nb-rate">3.9</div>
+      </div>
+
+      <div class="nb">
+        <div class="nb-dot r"></div>
+        <div>
+          <div class="nb-name">АвтоТех «Тополь»</div>
+          <div class="nb-meta">1.2 км · сервис</div>
+        </div>
+        <div class="nb-rate" style="color:var(--red)">2.8</div>
+      </div>
+
+      <div class="nb">
+        <div class="nb-dot g"></div>
+        <div>
+          <div class="nb-name">Колеса & Диски</div>
+          <div class="nb-meta">1.4 км · шиномонтаж</div>
+        </div>
+        <div class="nb-rate">4.7</div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="attribution">02 — material sunrise</div>
+
+</body>
+</html>

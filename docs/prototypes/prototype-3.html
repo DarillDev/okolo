@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>okolo-auto · 03 aurora ultra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0818;
+    --bg-2: #0e0b20;
+    --ink: #f3eefa;
+    --ink-dim: #a298bd;
+    --ink-mute: #6a6184;
+    --line: rgba(255,255,255,0.08);
+
+    --lime: #c2ff4a;
+    --cyan: #3dfff0;
+    --pink: #ff4ebb;
+    --violet: #8a5bff;
+    --amber: #ffb547;
+
+    --green: #70ffa1;
+    --red: #ff5577;
+  }
+  *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Instrument Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input { font-family: inherit; color: inherit; }
+
+  /* === Aurora background === */
+  .aurora {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(900px 600px at 10% 15%, rgba(138,91,255,0.50) 0%, transparent 55%),
+      radial-gradient(900px 700px at 95% 20%, rgba(255,78,187,0.35) 0%, transparent 55%),
+      radial-gradient(1000px 700px at 50% 110%, rgba(61,255,240,0.28) 0%, transparent 55%),
+      radial-gradient(800px 600px at 95% 90%, rgba(194,255,74,0.22) 0%, transparent 55%),
+      var(--bg);
+    overflow: hidden;
+  }
+  .aurora::after {
+    /* subtle grain */
+    content:'';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' seed='7'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+    opacity: 0.08;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+
+  /* === Tilted map stage === */
+  .stage {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    perspective: 1600px;
+    overflow: hidden;
+  }
+  .map {
+    position: absolute;
+    inset: -40px -40px -40px -40px;
+    background:
+      radial-gradient(900px 600px at 30% 30%, rgba(138,91,255,0.15), transparent 60%),
+      radial-gradient(800px 600px at 75% 70%, rgba(61,255,240,0.09), transparent 60%),
+      linear-gradient(180deg, #0f0a26 0%, #0a0818 100%);
+    border-radius: 32px;
+    transform: rotateX(16deg) rotateZ(-2deg) scale(1.06) translateY(-4%);
+    transform-origin: 50% 40%;
+    box-shadow:
+      0 60px 120px -30px rgba(0,0,0,0.9),
+      inset 0 0 120px rgba(138,91,255,0.2);
+    overflow: hidden;
+  }
+  .map::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(160,120,255,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(160,120,255,0.08) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(80% 70% at 50% 50%, #000 40%, transparent 100%);
+  }
+  .map .river {
+    position: absolute; inset: 0;
+  }
+  .map .river svg { width: 100%; height: 100%; }
+  .map .river .water {
+    stroke: rgba(61,255,240,0.25);
+    stroke-width: 80;
+    fill: none;
+    filter: blur(8px);
+  }
+  .map .river .water-core {
+    stroke: rgba(61,255,240,0.6);
+    stroke-width: 2;
+    stroke-dasharray: 6 8;
+    fill: none;
+  }
+  .map .roads { position: absolute; inset: 0; }
+  .map .roads svg { width: 100%; height: 100%; }
+  .map .roads path {
+    stroke: rgba(255,255,255,0.05);
+    stroke-width: 1.5;
+    fill: none;
+  }
+  .map .roads path.major {
+    stroke: rgba(194,255,74,0.14);
+    stroke-width: 2.2;
+  }
+  .map .roads path.glow {
+    stroke: rgba(255,78,187,0.25);
+    stroke-width: 2;
+    filter: blur(1px);
+    fill: none;
+  }
+
+  /* Markers live in un-tilted overlay to stay readable */
+  .markers {
+    position: fixed; inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .m {
+    position: absolute;
+    transform: translate(-50%,-50%);
+    pointer-events: auto;
+  }
+  .m .core {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 3px solid var(--bg);
+    position: relative;
+    z-index: 2;
+  }
+  .m::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    transform: translate(-50%,-50%);
+    filter: blur(14px);
+    z-index: 0;
+  }
+  .m::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    transform: translate(-50%,-50%);
+    z-index: 1;
+    border: 1px solid currentColor;
+    opacity: 0.5;
+  }
+  .m.g { color: var(--green); }
+  .m.g .core { background: var(--green); }
+  .m.g::before { background: radial-gradient(circle, var(--green), transparent 70%); opacity: 0.7; }
+  .m.y { color: var(--amber); }
+  .m.y .core { background: var(--amber); }
+  .m.y::before { background: radial-gradient(circle, var(--amber), transparent 70%); opacity: 0.7; }
+  .m.r { color: var(--red); }
+  .m.r .core { background: var(--red); }
+  .m.r::before { background: radial-gradient(circle, var(--red), transparent 70%); opacity: 0.8; }
+
+  .m.sel .core {
+    width: 30px; height: 30px;
+    border-width: 4px;
+  }
+  .m.sel::before { width: 90px; height: 90px; }
+
+  .m.me {
+    z-index: 3;
+  }
+  .m.me .core {
+    width: 26px; height: 26px;
+    background: radial-gradient(circle at 35% 35%, #fff, var(--cyan));
+    border-color: var(--bg);
+  }
+  .m.me::before {
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(61,255,240,0.35), transparent 55%);
+    filter: blur(0);
+  }
+  .m.me::after {
+    width: 260px; height: 260px;
+    border: 1.5px dashed rgba(61,255,240,0.35);
+    opacity: 1;
+    animation: spin 50s linear infinite;
+  }
+  @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+  /* Badge label on selected marker */
+  .m .label {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 14px);
+    transform: translateX(-50%);
+    white-space: nowrap;
+    padding: 8px 14px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink);
+    box-shadow: 0 10px 30px -8px rgba(0,0,0,0.7);
+  }
+  .m .label::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 100%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--bg);
+  }
+  .m .label .tag {
+    margin-left: 6px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  /* === Top nav (logo + pill nav + profile) === */
+  .topnav {
+    position: fixed;
+    top: 24px; left: 24px; right: 24px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .logo-mark {
+    width: 48px; height: 48px;
+    border-radius: 16px;
+    background:
+      conic-gradient(from 120deg, var(--lime), var(--cyan), var(--pink), var(--violet), var(--lime));
+    position: relative;
+    box-shadow:
+      0 10px 30px -8px rgba(194,255,74,0.4),
+      0 10px 30px -8px rgba(255,78,187,0.35);
+  }
+  .logo-mark::after {
+    content: '';
+    position: absolute; inset: 7px;
+    border-radius: 10px;
+    background: var(--bg);
+  }
+  .logo-mark::before {
+    content: '';
+    position: absolute; inset: 14px;
+    border-radius: 4px;
+    background: conic-gradient(from 0deg, var(--lime), var(--cyan), var(--pink), var(--lime));
+  }
+  .logo-name {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: -0.04em;
+  }
+  .logo-name span { color: var(--ink-mute); font-weight: 400; }
+
+  .pill-nav {
+    display: flex;
+    gap: 2px;
+    padding: 6px;
+    background: rgba(14,11,32,0.55);
+    backdrop-filter: blur(28px) saturate(140%);
+    -webkit-backdrop-filter: blur(28px) saturate(140%);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: 0 30px 50px -20px rgba(0,0,0,0.6);
+  }
+  .pill-nav button {
+    padding: 12px 22px;
+    background: transparent;
+    border: 0; cursor: pointer;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    letter-spacing: -0.005em;
+  }
+  .pill-nav button:hover { color: var(--ink); }
+  .pill-nav button.active {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .top-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .icon-btn {
+    width: 52px; height: 52px;
+    border-radius: 16px;
+    background: rgba(14,11,32,0.55);
+    backdrop-filter: blur(28px);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    display: grid; place-items: center;
+    color: var(--ink);
+    position: relative;
+  }
+  .icon-btn .notif-dot {
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--pink);
+    box-shadow: 0 0 10px var(--pink);
+  }
+  .avatar-btn {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background:
+      conic-gradient(from 0deg, var(--lime), var(--cyan), var(--pink), var(--lime));
+    padding: 2px;
+    cursor: pointer;
+  }
+  .avatar-btn > div {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: var(--bg);
+    display: grid; place-items: center;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  /* === Big floating search === */
+  .search {
+    position: fixed;
+    top: 96px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 38;
+    width: min(760px, calc(100% - 48px));
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px 10px 24px;
+    background: rgba(14,11,32,0.7);
+    backdrop-filter: blur(32px) saturate(160%);
+    -webkit-backdrop-filter: blur(32px) saturate(160%);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow:
+      0 40px 80px -20px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,255,255,0.05),
+      0 0 0 1px rgba(138,91,255,0.15);
+  }
+  .search svg.q { opacity: 0.6; flex-shrink: 0; }
+  .search input {
+    flex: 1;
+    background: transparent; border: 0; outline: 0;
+    font-size: 16px; font-weight: 500;
+    padding: 16px 0;
+    color: var(--ink);
+  }
+  .search input::placeholder { color: var(--ink-mute); font-weight: 400; }
+  .search .voice {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--violet), var(--pink));
+    color: #fff;
+    border: 0; cursor: pointer;
+    display: grid; place-items: center;
+    box-shadow: 0 10px 24px -6px rgba(255,78,187,0.5);
+  }
+  .search .go {
+    height: 48px;
+    padding: 0 22px;
+    border-radius: 14px;
+    background: var(--lime);
+    color: #0a0818;
+    border: 0; cursor: pointer;
+    font-weight: 700; font-size: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    letter-spacing: -0.01em;
+    box-shadow:
+      0 10px 26px -6px rgba(194,255,74,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+
+  /* === Category chips === */
+  .chips {
+    position: fixed;
+    top: 176px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 34;
+    display: flex;
+    gap: 8px;
+    max-width: calc(100% - 48px);
+    overflow-x: auto;
+    padding: 4px;
+  }
+  .chip {
+    padding: 10px 18px;
+    background: rgba(14,11,32,0.55);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .chip:hover { border-color: rgba(255,255,255,0.2); }
+  .chip.warn {
+    background: linear-gradient(135deg, rgba(255,85,119,0.28), rgba(255,78,187,0.24));
+    border-color: rgba(255,85,119,0.45);
+    color: #ffd9e1;
+  }
+  .chip.warn .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 10px var(--red);
+  }
+  .chip.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  /* === Left side: radius dial === */
+  .radius-dial {
+    position: fixed;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    padding: 14px 12px;
+    background: rgba(14,11,32,0.55);
+    backdrop-filter: blur(28px);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .radius-dial .t {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    padding: 0 10px 10px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .radius-dial button {
+    padding: 12px 10px;
+    border-radius: 14px;
+    background: transparent;
+    border: 0; cursor: pointer;
+    color: var(--ink-dim);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 64px;
+    text-align: center;
+  }
+  .radius-dial button:hover { background: rgba(255,255,255,0.04); color: var(--ink); }
+  .radius-dial button.active {
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    color: #0a0818;
+    box-shadow:
+      0 10px 26px -6px rgba(61,255,240,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .radius-dial button small {
+    display: block;
+    font-weight: 500; font-size: 10px;
+    opacity: 0.7; margin-top: 2px;
+  }
+
+  /* === Right side: zoom + layers === */
+  .side-right {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .side-group {
+    background: rgba(14,11,32,0.55);
+    backdrop-filter: blur(28px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .side-group button {
+    width: 56px; height: 56px;
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--ink);
+    display: grid; place-items: center;
+  }
+  .side-group button + button { border-top: 1px solid var(--line); }
+  .side-group button:hover { background: rgba(255,255,255,0.04); }
+  .side-group button.active {
+    background: linear-gradient(135deg, rgba(194,255,74,0.16), rgba(61,255,240,0.12));
+    color: var(--lime);
+  }
+
+  /* === Floating CTA (find near me) === */
+  .find-cta {
+    position: fixed;
+    left: 50%;
+    bottom: 368px;
+    transform: translateX(-50%);
+    z-index: 35;
+    height: 74px;
+    padding: 0 34px 0 24px;
+    border-radius: 24px;
+    background:
+      linear-gradient(135deg, var(--lime) 0%, var(--cyan) 100%);
+    color: #0a0818;
+    border: 0; cursor: pointer;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    display: inline-flex; align-items: center; gap: 16px;
+    box-shadow:
+      0 30px 60px -15px rgba(194,255,74,0.5),
+      0 20px 40px -10px rgba(61,255,240,0.35),
+      inset 0 2px 0 rgba(255,255,255,0.5),
+      inset 0 -2px 0 rgba(0,0,0,0.1);
+    transition: transform .25s;
+  }
+  .find-cta:hover { transform: translateX(-50%) translateY(-3px); }
+  .find-cta .icon {
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    background: rgba(10,8,24,0.14);
+    display: grid; place-items: center;
+  }
+  .find-cta small {
+    display: block;
+    font-family: 'Instrument Sans', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.6;
+    margin-bottom: -2px;
+  }
+
+  /* === Bottom sheet === */
+  .sheet {
+    position: fixed;
+    left: 24px; right: 24px;
+    bottom: 24px;
+    z-index: 25;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 14px;
+    height: 328px;
+  }
+  .panel {
+    background: rgba(14,11,32,0.62);
+    backdrop-filter: blur(32px) saturate(150%);
+    -webkit-backdrop-filter: blur(32px) saturate(150%);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 26px;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 40px 80px -30px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* === Featured hero card with holo border === */
+  .hero {
+    background:
+      radial-gradient(400px 240px at 100% 0%, rgba(255,78,187,0.2), transparent 60%),
+      radial-gradient(400px 240px at 0% 100%, rgba(138,91,255,0.18), transparent 60%),
+      rgba(14,11,32,0.7);
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(194,255,74,0.4), transparent 30%, transparent 70%, rgba(255,78,187,0.45));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .hero .row-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .badge-warn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px 8px 10px;
+    background: rgba(255,85,119,0.14);
+    border: 1px solid rgba(255,85,119,0.35);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+    color: #ffa9b6;
+    letter-spacing: -0.005em;
+  }
+  .badge-warn .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 0 3px rgba(255,85,119,0.25), 0 0 10px var(--red);
+  }
+  .live {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--lime);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .live::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--lime);
+    box-shadow: 0 0 8px var(--lime);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .hero h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 42px;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    margin-bottom: 8px;
+  }
+  .hero h2 em {
+    font-style: italic;
+    font-weight: 400;
+    background: linear-gradient(135deg, var(--pink) 0%, var(--lime) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero .addr {
+    font-size: 13px; color: var(--ink-dim);
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hero .addr strong { color: var(--ink); font-weight: 700; }
+
+  .rating-block {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 24px;
+    align-items: end;
+    margin-bottom: 18px;
+  }
+  .big {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 74px;
+    line-height: 0.85;
+    letter-spacing: -0.05em;
+    background: linear-gradient(135deg, var(--red) 0%, var(--amber) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .periods {
+    display: flex; gap: 8px;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+  .p-col {
+    flex: 1;
+    padding: 0 4px;
+  }
+  .p-col .lbl {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .p-col .v {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .p-col .v .delta { font-size: 11px; font-family: 'Instrument Sans'; font-weight: 600; color: var(--red); }
+  .p-col.neg .v { color: var(--red); }
+  .p-col.pos .v { color: var(--green); }
+
+  .hero .cta-row {
+    position: absolute; left: 26px; right: 26px; bottom: 26px;
+    display: flex; gap: 10px;
+  }
+  .btn {
+    height: 54px;
+    padding: 0 22px;
+    border-radius: 16px;
+    border: 0; cursor: pointer;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 10px;
+    justify-content: center;
+  }
+  .btn.primary {
+    background: var(--lime);
+    color: #0a0818;
+    flex: 1;
+    box-shadow:
+      0 10px 28px -8px rgba(194,255,74,0.55),
+      inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .btn.ghost {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    width: 54px;
+    padding: 0;
+  }
+  .btn.ghost:hover { background: rgba(255,255,255,0.08); }
+
+  /* === Warnings feed === */
+  .feed h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .feed h3 .live { text-transform: uppercase; }
+  .f-item {
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .f-item:first-of-type { border-top: 0; padding-top: 0; }
+  .f-ava {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 700;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .f-ava.v::after {
+    content: '';
+    position: absolute;
+    right: -3px; bottom: -3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--lime);
+    border: 2px solid #14112a;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M3 6l2 2 4-4' stroke='%230a0818' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  .f-who { font-size: 13px; font-weight: 700; }
+  .f-meta { font-size: 11px; color: var(--ink-mute); margin-bottom: 4px; }
+  .f-txt {
+    font-size: 13px;
+    color: var(--ink-dim);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .f-txt mark {
+    background: rgba(255,78,187,0.18);
+    color: #ff9bd4;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .f-score {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .f-score.r { color: var(--red); }
+  .f-score.y { color: var(--amber); }
+
+  /* === Legend / stats === */
+  .legend h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 16px;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line);
+  }
+  .stat .lbl {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .stat .v {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .stat.lime .v { color: var(--lime); }
+  .stat.cyan .v { color: var(--cyan); }
+  .stat.pink .v { color: var(--pink); }
+  .stat.red  .v { color: var(--red); }
+
+  .legend-items {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line);
+  }
+  .lg-row {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .lg-row .d {
+    width: 12px; height: 12px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .lg-row .d.g { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .lg-row .d.y { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+  .lg-row .d.r { background: var(--red);   box-shadow: 0 0 10px var(--red); }
+  .lg-row strong { color: var(--ink); font-weight: 700; margin-right: 6px; }
+  .lg-row .n {
+    margin-left: auto;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .attribution {
+    position: fixed;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+  <!-- aurora -->
+  <div class="aurora"></div>
+
+  <!-- tilted map -->
+  <div class="stage">
+    <div class="map">
+      <div class="river">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+          <path class="water" d="M -50 440 Q 320 370, 580 470 T 1140 510 T 1700 450" />
+          <path class="water-core" d="M -50 440 Q 320 370, 580 470 T 1140 510 T 1700 450" />
+        </svg>
+      </div>
+      <div class="roads">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="none">
+          <path class="glow" d="M 0 200 L 1600 220" />
+          <path class="major" d="M 0 200 L 1600 220" />
+          <path class="major" d="M 0 640 L 1600 620" />
+          <path class="major" d="M 340 0 L 400 900" />
+          <path class="major" d="M 1000 0 L 1060 900" />
+          <path d="M 0 300 L 1600 300" />
+          <path d="M 0 390 L 1600 390" />
+          <path d="M 0 740 L 1600 760" />
+          <path d="M 180 0 L 200 900" />
+          <path d="M 640 0 L 680 900" />
+          <path d="M 800 0 L 830 900" />
+          <path d="M 1260 0 L 1320 900" />
+          <path class="glow" d="M 800 0 L 830 900" />
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- MARKERS OVERLAY (flat, readable) -->
+  <div class="markers">
+    <div class="m me" style="left:40%; top:57%"><div class="core"></div></div>
+
+    <div class="m r sel" style="left:46%; top:48%">
+      <div class="core"></div>
+      <div class="label">АвтоТех «Тополь» <span class="tag">2.8</span></div>
+    </div>
+
+    <div class="m g" style="left:26%; top:54%"><div class="core"></div></div>
+    <div class="m g" style="left:32%; top:42%"><div class="core"></div></div>
+    <div class="m g" style="left:52%; top:66%"><div class="core"></div></div>
+    <div class="m g" style="left:62%; top:42%"><div class="core"></div></div>
+    <div class="m g" style="left:70%; top:58%"><div class="core"></div></div>
+    <div class="m g" style="left:84%; top:52%"><div class="core"></div></div>
+    <div class="m y" style="left:22%; top:66%"><div class="core"></div></div>
+    <div class="m y" style="left:54%; top:46%"><div class="core"></div></div>
+    <div class="m y" style="left:74%; top:68%"><div class="core"></div></div>
+    <div class="m r" style="left:20%; top:38%"><div class="core"></div></div>
+    <div class="m r" style="left:80%; top:38%"><div class="core"></div></div>
+    <div class="m g" style="left:42%; top:32%"><div class="core"></div></div>
+  </div>
+
+  <!-- top nav -->
+  <header class="topnav">
+    <div class="logo">
+      <div class="logo-mark"></div>
+      <div class="logo-name">okolo<span>.auto</span></div>
+    </div>
+
+    <nav class="pill-nav">
+      <button class="active">Карта</button>
+      <button>Список</button>
+      <button>Тикеты · 12</button>
+      <button>Антирейтинг</button>
+    </nav>
+
+    <div class="top-right">
+      <button class="icon-btn" aria-label="Уведомления">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 21a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="notif-dot"></span>
+      </button>
+      <button class="avatar-btn">
+        <div>СЧ</div>
+      </button>
+    </div>
+  </header>
+
+  <!-- search -->
+  <div class="search">
+    <svg class="q" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M20 20L17 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <input placeholder="Шиномонтаж рядом, кузовной для BMW, Свердловский район…" />
+    <button class="voice" aria-label="Голосовой поиск">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button class="go">
+      Найти
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- chips -->
+  <div class="chips">
+    <div class="chip warn"><span class="dot"></span>Только предупреждения · 38</div>
+    <div class="chip active">Все категории</div>
+    <div class="chip">🔧 Сервис</div>
+    <div class="chip">🛞 Шиномонтаж</div>
+    <div class="chip">🔨 Кузовной</div>
+    <div class="chip">💧 Мойка</div>
+    <div class="chip">🚙 Автоподбор</div>
+    <div class="chip">🔎 Открыто сейчас</div>
+  </div>
+
+  <!-- radius dial -->
+  <aside class="radius-dial">
+    <div class="t">радиус</div>
+    <button>1<small>км</small></button>
+    <button class="active">3<small>км</small></button>
+    <button>5<small>км</small></button>
+    <button>10<small>км</small></button>
+  </aside>
+
+  <!-- right side: zoom + layers -->
+  <aside class="side-right">
+    <div class="side-group">
+      <button aria-label="Увеличить">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <button aria-label="Уменьшить">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="side-group">
+      <button class="active" aria-label="Слои">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+      <button aria-label="Компас">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M9 15l2-6 6-2-2 6-6 2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+      <button aria-label="Поделиться">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- find cta -->
+  <button class="find-cta">
+    <span class="icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span>
+      <small>геолокация</small>
+      Найти рядом со мной
+    </span>
+  </button>
+
+  <!-- BOTTOM SHEET -->
+  <section class="sheet">
+
+    <!-- HERO -->
+    <div class="panel hero">
+      <div class="row-top">
+        <span class="badge-warn"><span class="dot"></span>Негативный тренд · 3 мес</span>
+        <span class="live">обновлено минуту назад</span>
+      </div>
+
+      <h2>АвтоТех <em>«Тополь»</em></h2>
+      <div class="addr">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-7.5-7-12a7 7 0 1 1 14 0c0 4.5-7 12-7 12z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>
+        Байкальская, 206/5 · <strong>1.2 км</strong> · открыто до 20:00
+      </div>
+
+      <div class="rating-block">
+        <div class="big">2.8</div>
+        <div class="periods">
+          <div class="p-col neg">
+            <div class="lbl">3 мес</div>
+            <div class="v">2.4 <span class="delta">↓ 0.9</span></div>
+          </div>
+          <div class="p-col neg">
+            <div class="lbl">6 мес</div>
+            <div class="v">3.1</div>
+          </div>
+          <div class="p-col">
+            <div class="lbl">всё время</div>
+            <div class="v">3.7</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-row">
+        <button class="btn primary">
+          Читать 127 отзывов
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn ghost" aria-label="Сохранить">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" stroke="currentColor" stroke-width="1.6"/></svg>
+        </button>
+        <button class="btn ghost" aria-label="Позвонить">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 5c0 9 6 15 15 15l2-4-5-2-2 2a13 13 0 0 1-6-6l2-2-2-5-4 2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- WARNING FEED -->
+    <div class="panel feed">
+      <h3>Предупреждения <span class="live">live</span></h3>
+
+      <div class="f-item">
+        <div class="f-ava v">МП</div>
+        <div>
+          <div class="f-who">Михаил П.</div>
+          <div class="f-meta">2 дня · Kia Rio · «Тополь»</div>
+          <div class="f-txt"><mark>насчитали замену всего рычага</mark> вместо одной стойки. Чек не дали, расписка от руки.</div>
+        </div>
+        <div class="f-score r">1.0</div>
+      </div>
+
+      <div class="f-item">
+        <div class="f-ava">АС</div>
+        <div>
+          <div class="f-who">Анна С.</div>
+          <div class="f-meta">4 дня · Solaris · «Тополь»</div>
+          <div class="f-txt">Возвращалась 3 раза, стук не ушёл — сказали <mark>«так и должно быть»</mark>.</div>
+        </div>
+        <div class="f-score r">2.0</div>
+      </div>
+
+      <div class="f-item">
+        <div class="f-ava v">ДК</div>
+        <div>
+          <div class="f-who">Дмитрий К.</div>
+          <div class="f-meta">1 нед · Camry · «Автолидер»</div>
+          <div class="f-txt">Обещали 2 часа — простояла весь день. +4 000 ₽ к цене сверху.</div>
+        </div>
+        <div class="f-score y">3.0</div>
+      </div>
+    </div>
+
+    <!-- LEGEND / STATS -->
+    <div class="panel legend">
+      <h3>Карта района · 3 км</h3>
+
+      <div class="stat-grid">
+        <div class="stat cyan">
+          <div class="lbl">Всего</div>
+          <div class="v">47</div>
+        </div>
+        <div class="stat lime">
+          <div class="lbl">Открыто</div>
+          <div class="v">19</div>
+        </div>
+        <div class="stat pink">
+          <div class="lbl">Ср. рейтинг</div>
+          <div class="v">3.6</div>
+        </div>
+        <div class="stat red">
+          <div class="lbl">Жалобы 3м</div>
+          <div class="v">32</div>
+        </div>
+      </div>
+
+      <div class="legend-items">
+        <div class="lg-row">
+          <span class="d g"></span>
+          <strong>Зелёные</strong> ≥ 4.3 — доверие
+          <span class="n">24</span>
+        </div>
+        <div class="lg-row">
+          <span class="d y"></span>
+          <strong>Жёлтые</strong> 3.5–4.2 — осторожно
+          <span class="n">15</span>
+        </div>
+        <div class="lg-row">
+          <span class="d r"></span>
+          <strong>Красные</strong> &lt; 3.5 — предупр.
+          <span class="n">8</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="attribution">03 — aurora ultra · okolo.auto</div>
+
+</body>
+</html>

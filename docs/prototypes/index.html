@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>okolo-auto · прототипы главного экрана</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html,body { min-height: 100vh; }
+  body {
+    font-family: 'Onest', system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 800px at 10% 0%, #1a1530 0%, transparent 60%),
+      radial-gradient(1000px 700px at 90% 100%, #0d2530 0%, transparent 55%),
+      #07070c;
+    color: #e8e6f0;
+    padding: 80px 40px;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: #8a82b5; margin-bottom: 24px;
+  }
+  h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 300;
+    font-size: clamp(42px, 6vw, 84px);
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    margin-bottom: 20px;
+  }
+  h1 em {
+    font-style: normal;
+    background: linear-gradient(120deg, #9fffb0 0%, #4fc3ff 50%, #ff7bde 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 500;
+  }
+  p.lead { font-size: 18px; color: #a9a5c4; max-width: 620px; margin-bottom: 72px; line-height: 1.55; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    position: relative;
+    aspect-ratio: 4/5;
+    border-radius: 24px;
+    padding: 28px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    text-decoration: none; color: inherit;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: transform .4s cubic-bezier(.2,.8,.2,1), border-color .3s;
+  }
+  .card::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    transition: opacity .5s;
+  }
+  .card:hover { transform: translateY(-6px); border-color: rgba(255,255,255,0.18); }
+  .card > * { position: relative; z-index: 1; }
+  .c1::before {
+    background:
+      radial-gradient(600px 400px at 20% 0%, rgba(79,195,255,.22), transparent 60%),
+      radial-gradient(500px 500px at 100% 100%, rgba(159,255,176,.16), transparent 55%),
+      #0c0d14;
+  }
+  .c2::before {
+    background:
+      radial-gradient(600px 400px at 100% 0%, rgba(255,180,140,.35), transparent 55%),
+      radial-gradient(500px 500px at 0% 100%, rgba(255,123,222,.2), transparent 55%),
+      #f6f0e6;
+  }
+  .c2 { color: #1a1512; }
+  .c3::before {
+    background:
+      radial-gradient(700px 400px at 50% 100%, rgba(191,255,80,.25), transparent 55%),
+      radial-gradient(600px 400px at 0% 0%, rgba(255,70,180,.3), transparent 55%),
+      #0a0818;
+  }
+  .num {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 300;
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    opacity: 0.6;
+  }
+  .title {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 500;
+    font-size: 32px;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    margin-bottom: 8px;
+  }
+  .desc { font-size: 14px; line-height: 1.55; opacity: 0.75; margin-bottom: 20px; }
+  .meta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .tag {
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    opacity: 0.6;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .arrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin-top: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+  }
+  .arrow svg { transition: transform .3s; }
+  .card:hover .arrow svg { transform: translateX(6px); }
+  footer {
+    margin-top: 120px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-size: 12px; color: #5b5776; letter-spacing: 0.12em; text-transform: uppercase;
+    display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">okolo-auto · main screen explorations</div>
+    <h1>Три взгляда<br>на один <em>главный экран</em>.</h1>
+    <p class="lead">Карта автосервисов с честными отзывами. Каждый прототип — отдельное дизайн-направление. Выбирайте настроение.</p>
+
+    <div class="grid">
+      <a href="prototype-1.html" class="card c1">
+        <div>
+          <div class="num">01 — ТЁМНАЯ</div>
+          <div class="title" style="margin-top:16px">Neon<br>Cartograph</div>
+          <div class="desc">Глубокая ночь, стеклянные панели над картой, неоновые ореолы точек. Плотность и контраст.</div>
+        </div>
+        <div>
+          <div class="meta">
+            <span class="tag">glass</span><span class="tag">neon</span><span class="tag">dark</span>
+          </div>
+          <span class="arrow">Открыть <svg width="22" height="12" viewBox="0 0 22 12" fill="none"><path d="M1 6H21M21 6L16 1M21 6L16 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+        </div>
+      </a>
+
+      <a href="prototype-2.html" class="card c2">
+        <div>
+          <div class="num">02 — СВЕТЛАЯ</div>
+          <div class="title" style="margin-top:16px">Material<br>Sunrise</div>
+          <div class="desc">Тёплый бумажный свет, мягкие цветные тени, крупная типографика. Material You с характером.</div>
+        </div>
+        <div>
+          <div class="meta">
+            <span class="tag">material</span><span class="tag">warm</span><span class="tag">light</span>
+          </div>
+          <span class="arrow">Открыть <svg width="22" height="12" viewBox="0 0 22 12" fill="none"><path d="M1 6H21M21 6L16 1M21 6L16 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+        </div>
+      </a>
+
+      <a href="prototype-3.html" class="card c3">
+        <div>
+          <div class="num">03 — ТЁМНАЯ+</div>
+          <div class="title" style="margin-top:16px">Aurora<br>Ultra</div>
+          <div class="desc">Перспективный наклон карты, ярчайшие акценты, объёмные карточки. Максимум характера без хаоса.</div>
+        </div>
+        <div>
+          <div class="meta">
+            <span class="tag">bold</span><span class="tag">3d</span><span class="tag">vibrant</span>
+          </div>
+          <span class="arrow">Открыть <svg width="22" height="12" viewBox="0 0 22 12" fill="none"><path d="M1 6H21M21 6L16 1M21 6L16 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+        </div>
+      </a>
+    </div>
+
+    <footer>
+      <span>окolo-auto · пилот иркутск</span>
+      <span>прототипы · 2026</span>
+    </footer>
+  </div>
+</body>
+</html>
