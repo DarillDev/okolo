@@ -1,0 +1,47 @@
+// =============================================================================
+// okolo · neon cartograph — БАЗА
+// Сброс + корневые настройки документа на основе токенов.
+// =============================================================================
+
+@use 'surfaces' as *;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: var(--lh-normal);
+  letter-spacing: var(--ls-body);
+  color: var(--c-ink);
+  background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+// Доступность: единое кольцо фокуса для клавиатуры, без рамки на мышь.
+:focus-visible {
+  @include ds-focus-ring;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}

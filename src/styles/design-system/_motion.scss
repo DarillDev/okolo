@@ -1,0 +1,88 @@
+// =============================================================================
+// okolo · neon cartograph — АНИМАЦИИ
+//
+// Моушен здесь «живой, но дисциплинированный»: маркеры на карте дышат и
+// пульсируют (предупреждения притягивают взгляд), интерфейс отвечает на ховер
+// быстрым подъёмом. Всё остальное — тихо. Уважаем prefers-reduced-motion.
+// =============================================================================
+
+:root {
+  // --- Длительности ---------------------------------------------------------
+  --dur-fast: 0.2s; // ховеры, смена состояний (transform/цвет/граница)
+  --dur-mid: 0.4s; // раскрытия панелей
+  --dur-reveal: 0.6s; // входные появления
+  --dur-pulse: 2.6s; // пульс маркера
+  --dur-breathe: 3s; // «дыхание» primary-FAB
+
+  // --- Кривые ---------------------------------------------------------------
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); // вылет/появление
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1); // стандартные переходы
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  // --- Готовые переходы -----------------------------------------------------
+  --t-hover: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-standard);
+  --t-colors: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+// --- Ключевые кадры ----------------------------------------------------------
+
+// Пульс маркера: расходящееся кольцо (статус-сигнал на карте).
+@keyframes ds-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+// Дыхание: лёгкое масштабирование ореола у primary-действия.
+@keyframes ds-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.2;
+  }
+}
+
+// Входное появление снизу — для панелей и карточек.
+@keyframes ds-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// --- Миксины-помощники -------------------------------------------------------
+
+@mixin ds-pulse($color: currentColor) {
+  border: 2px solid $color;
+  border-radius: var(--radius-full);
+  animation: ds-pulse var(--dur-pulse) var(--ease-out) infinite;
+}
+
+@mixin ds-reveal($delay: 0s) {
+  animation: ds-fade-up var(--dur-reveal) var(--ease-out) $delay both;
+}
+
+// --- Доступность: уважаем отказ от движения ----------------------------------
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
