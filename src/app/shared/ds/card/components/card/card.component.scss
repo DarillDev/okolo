@@ -1,0 +1,58 @@
+@use 'surfaces' as surf;
+
+// --- Размер: класс на хосте ИЛИ на любом предке -------------------------------
+:host-context(.S) {
+  --ds-card-pad: var(--space-4); // 16px
+  --ds-card-radius: var(--radius-md); // 14px
+}
+:host-context(.M) {
+  --ds-card-pad: var(--space-6); // 24px
+  --ds-card-radius: var(--radius-xl); // 22px
+}
+:host-context(.L) {
+  --ds-card-pad: var(--space-8); // 32px
+  --ds-card-radius: var(--radius-2xl); // 24px
+}
+:host-context(.XL) {
+  --ds-card-pad: var(--space-10); // 40px
+  --ds-card-radius: var(--radius-2xl); // 24px
+}
+
+:host {
+  --ds-card-pad: var(--space-6);
+  --ds-card-radius: var(--radius-xl); // 22px
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--ds-card-pad);
+  border-radius: var(--ds-card-radius);
+
+  &.glass {
+    @include surf.ds-glass;
+    border-radius: var(--ds-card-radius);
+  }
+
+  &.panel {
+    @include surf.ds-panel;
+    border-radius: var(--ds-card-radius);
+  }
+
+  &.interactive {
+    cursor: pointer;
+    transition: var(--t-hover);
+
+    &:hover {
+      transform: translateY(-6px);
+      border-color: var(--c-line-strong);
+    }
+
+    &:focus-visible {
+      @include surf.ds-focus-ring;
+    }
+  }
+
+  &.reveal {
+    animation: ds-fade-up var(--dur-reveal) var(--ease-out) both;
+  }
+}
