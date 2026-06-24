@@ -14,13 +14,10 @@
     "importHelpers": true,
     "target": "ES2022",
     "module": "preserve",
-    "baseUrl": ".",
     "paths": {
-      "@shared/ds": ["src/app/shared/ds/index.ts"],
-      "@shared/ds/*": ["src/app/shared/ds/*"],
-      "@shared/ui-kit": ["src/app/shared/ui-kit/index.ts"],
-      "@shared/ui-kit/*": ["src/app/shared/ui-kit/*"],
-      "@shared/models/*": ["src/app/shared/models/*"]
+      "@shared/ds/*": ["./src/app/shared/ds/*"],
+      "@shared/ui-kit/*": ["./src/app/shared/ui-kit/*"],
+      "@shared/models/*": ["./src/app/shared/models/*"]
     }
   },
   "angularCompilerOptions": {

@@ -1,6 +1,72 @@
 <router-outlet />
 
-<ds-card [interactive]="true" [reveal]="true" appearance="glass">
-  <h3 dsCardHeader align="start">Заголовок</h3>
-  Контент карточки
-</ds-card>
+<div class="demo">
+  <h1 class="demo__title">ds-form-field — оси параметризации</h1>
+
+  <!-- ====== МАТРИЦА appearance × shape ====== -->
+  <section class="demo__section">
+    <h2 class="demo__h2">appearance × shape <span class="demo__muted">(size M)</span></h2>
+
+    <div class="demo__grid demo__grid--backdrop">
+      @for (v of matrix; track v.appearance + v.shape) {
+        <div class="demo__cell">
+          <span class="demo__tag">{{ v.appearance }} · {{ v.shape }}</span>
+
+          <ds-form-field [appearance]="v.appearance" [shape]="v.shape">
+            <input dsInput type="text" placeholder="Найти сервис рядом…" />
+          </ds-form-field>
+
+          <!-- с лупой и suffix-чипом -->
+          <ds-form-field [appearance]="v.appearance" [shape]="v.shape">
+            <span dsPrefix aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6" />
+                <path d="M20 20L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+            </span>
+            <input dsInput type="text" placeholder="С иконкой и suffix" />
+            <span dsSuffix class="demo__kbd">⌘K</span>
+          </ds-form-field>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ====== РАЗМЕРЫ ====== -->
+  <section class="demo__section">
+    <h2 class="demo__h2">size <span class="demo__muted">(appearance outline · box)</span></h2>
+
+    <div class="demo__row">
+      @for (s of sizes; track s) {
+        <ds-form-field [size]="s">
+          <label dsLabel [attr.for]="input.id()">Размер {{ s }}</label>
+          <input dsInput #input="dsInput" type="text" [placeholder]="s" />
+        </ds-form-field>
+      }
+    </div>
+  </section>
+
+  <!-- ====== СОСТОЯНИЯ ====== -->
+  <section class="demo__section">
+    <h2 class="demo__h2">состояния</h2>
+
+    <div class="demo__row">
+      <ds-form-field>
+        <label dsLabel [attr.for]="hintInput.id()">С подсказкой</label>
+        <input dsInput #hintInput="dsInput" type="text" placeholder="введите имя" />
+        <span dsHint>Так вас увидят в карточке сервиса</span>
+      </ds-form-field>
+
+      <ds-form-field>
+        <label dsLabel [attr.for]="errInput.id()">С ошибкой</label>
+        <input dsInput #errInput="dsInput" type="text" placeholder="введите имя" />
+        <span dsError>Поле обязательно</span>
+      </ds-form-field>
+
+      <ds-form-field>
+        <label dsLabel [attr.for]="disInput.id()">Disabled</label>
+        <input dsInput #disInput="dsInput" type="text" placeholder="недоступно" disabled />
+      </ds-form-field>
+    </div>
+  </section>
+</div>

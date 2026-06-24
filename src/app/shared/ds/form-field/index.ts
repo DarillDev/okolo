@@ -8,3 +8,5 @@ export { ErrorDirective } from './directives/error/error.directive';
 export { FORM_FIELD_CONTROL } from './config/form-field-control.token';
 
 export type { IFormFieldControl } from './interfaces/form-field-control.interface';
+export type { TFormFieldAppearance } from './types/form-field-appearance.type';
+export type { TFormFieldShape } from './types/form-field-shape.type';

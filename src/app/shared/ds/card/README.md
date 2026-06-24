@@ -6,10 +6,10 @@
 
 ## Импорт
 
-Всё публичное доступно из алиаса `@shared/ds`. Импортируйте ровно то, что используете в шаблоне:
+Всё публичное доступно из бочки компонента `@shared/ds/card`. Импортируйте ровно то, что используете в шаблоне:
 
 ```ts
-import { CardComponent, DsCardHeaderDirective, DsCardFooterDirective } from '@shared/ds';
+import { CardComponent, DsCardHeaderDirective, DsCardFooterDirective } from '@shared/ds/card';
 
 @Component({
   selector: 'app-example',
@@ -124,7 +124,7 @@ export class ExampleComponent {}
 
 ```ts
 import { Component } from '@angular/core';
-import { CardComponent, DsCardHeaderDirective, DsCardFooterDirective } from '@shared/ds';
+import { CardComponent, DsCardHeaderDirective, DsCardFooterDirective } from '@shared/ds/card';
 
 @Component({
   selector: 'app-place-card',

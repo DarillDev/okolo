@@ -1,6 +1,6 @@
 import { Directive } from '@angular/core';
 
 @Directive({
-  selector: 'ds-label, [dsLabel]',
+  selector: '[dsLabel]',
 })
 export class LabelDirective {}

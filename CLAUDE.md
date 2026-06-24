@@ -12,7 +12,7 @@ features/* → shared/ui-kit → shared/ds → styles/design-system
 ```
 
 - `styles/design-system/` — токены + миксины (чистый SCSS, без Angular). Ядро DS.
-- `shared/ds/` — generic-примитивы Angular на токенах. Префикс `ds-`, алиас `@shared/ds`. **Домен не знают.**
+- `shared/ds/` — generic-примитивы Angular на токенах. Префикс `ds-`, импорт через бочку компонента `@shared/ds/<name>` (единого `@shared/ds` нет). **Домен не знают.**
 - `shared/ui-kit/` — бизнес-реализации (домен + кросс-фича) из ds-примитивов. Префикс `ui-`, алиас `@shared/ui-kit`.
 - `shared/models/` — доменные типы + общий `TDsSize`. Алиас `@shared/models`.
 - `features/*` — экраны и бизнес-логика. Префикс `app-`.
@@ -25,9 +25,12 @@ features/* → shared/ui-kit → shared/ds → styles/design-system
 - ds-компоненты **не** импортируют доменные модели.
 - Публичный API слоя — через `index.ts`-бочку. Абстрактные базы не экспортируются. Без бандл-массивов компонентов (`export const X = [...]`) — импортируем ровно нужное.
 - Стили — на токенах design-system, не на литералах. Нет токена — завести в `styles/design-system`.
+- `ng lint` форсит a11y-шаблоны и `no-input-rename`: signal-инпуты не алиасить; `<label>` требует явный `for` в шаблоне (рантайм-`for` от директивы линтер не видит); `(click)` на неинтерактивном элементе — только с обоснованным `eslint-disable`.
 
 ## Команды
 
+- `nvm use` (Node 22.23.1 из `.nvmrc`), пакетный менеджер — npm
+- `ng serve` — dev-сервер
 - `ng lint`
 - `ng build`
 - `ng test --no-watch` (vitest)

@@ -5,6 +5,6 @@ export interface IFormFieldControl {
   readonly isDisabled: Signal<boolean>;
   readonly id: Signal<string>;
 
-  onContainerClick(event: MouseEvent): void;
+  onContainerClick(event?: MouseEvent): void;
   setDescribedByIds(ids: string[]): void;
 }

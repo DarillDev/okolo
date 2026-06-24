@@ -1,12 +1,8 @@
-<ng-content select="ds-label, [dsLabel]" />
+<ng-content select="[dsLabel]" />
 
-<div
-  class="ds-form-field__wrapper"
-  [class.ds-form-field__wrapper--disabled]="isDisabled()"
-  (click)="onWrapperClick($event)"
->
+<div class="wrapper" [class.disabled]="isDisabled()" (click)="onWrapperClick($event)">
   @if (hasPrefix()) {
-    <div class="ds-form-field__prefix">
+    <div class="prefix">
       <ng-content select="ds-prefix, [dsPrefix]" />
     </div>
   }
@@ -14,14 +10,14 @@
   <ng-content />
 
   @if (hasSuffix()) {
-    <div class="ds-form-field__suffix">
+    <div class="suffix">
       <ng-content select="ds-suffix, [dsSuffix]" />
     </div>
   }
 </div>
 
 @if (hasError() || hasHint()) {
-  <div class="ds-form-field__hint" [class.ds-form-field__hint--error]="hasError()">
+  <div class="hint" [class.error]="hasError()">
     @if (hasError()) {
       <ng-content select="ds-error, [dsError]" />
     } @else {

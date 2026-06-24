@@ -1,8 +1,17 @@
-import { computed, Directive, ElementRef, inject, input } from '@angular/core';
+import {
+  booleanAttribute,
+  computed,
+  Directive,
+  DoCheck,
+  ElementRef,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { NgControl } from '@angular/forms';
 import { FORM_FIELD_CONTROL, IFormFieldControl } from '../form-field';
 
-let nextdsInputId = 0;
+let nextInputId = 0;
 
 @Directive({
   selector: 'input[dsInput]',
@@ -11,35 +20,43 @@ let nextdsInputId = 0;
   host: {
     class: 'ds-input',
     '[id]': 'id()',
+    '[disabled]': 'isDisabled()',
     '[attr.aria-invalid]': 'hasError() || null',
     '(input)': '_onInput()',
   },
 })
-export class InputDirective<T> implements IFormFieldControl {
+export class InputDirective implements IFormFieldControl, DoCheck {
   private readonly elementRef = inject(ElementRef<HTMLInputElement>);
   private readonly ngControl = inject(NgControl, { optional: true, self: true });
 
-  public readonly id = input(`ds-input-${nextdsInputId++}`);
-  public readonly emptyStateMatcher = input<((value: T) => boolean) | undefined>(undefined);
-  public readonly isDisabledInput = input(false, { alias: 'isDisabled' });
+  private readonly invalid = signal(false);
+  private readonly touchedOrDirty = signal(false);
+  private readonly controlDisabled = signal(false);
+  private readonly empty = signal(true);
 
-  public readonly hasError = computed(() => {
+  public readonly id = input(`ds-input-${nextInputId++}`);
+  public readonly disabled = input(false, { transform: booleanAttribute });
+  public readonly emptyStateMatcher = input<((value: string) => boolean) | undefined>(undefined);
+
+  public readonly hasError = computed(() => this.invalid() && this.touchedOrDirty());
+  public readonly isEmpty = computed(() => this.empty());
+  public readonly isDisabled = computed(() =>
+    this.ngControl?.control ? this.controlDisabled() : this.disabled(),
+  );
+
+  public ngDoCheck(): void {
     const control = this.ngControl?.control;
 
-    return !!control?.invalid && (!!control.touched || !!control.dirty);
-  });
+    if (control) {
+      this.invalid.set(!!control.invalid);
+      this.touchedOrDirty.set(!!control.touched || !!control.dirty);
+      this.controlDisabled.set(control.disabled);
+    }
 
-  public readonly isEmpty = computed(() => {
     const matcher = this.emptyStateMatcher() ?? this.defaultEmptyStateMatcher;
 
-    return matcher(this.elementRef.nativeElement.value);
-  });
-
-  public readonly isDisabled = computed(() => {
-    const control = this.ngControl?.control;
-
-    return control ? control.disabled : this.isDisabledInput();
-  });
+    this.empty.set(matcher(this.elementRef.nativeElement.value));
+  }
 
   public onContainerClick(): void {
     this.elementRef.nativeElement.focus();
@@ -63,7 +80,7 @@ export class InputDirective<T> implements IFormFieldControl {
     }
   }
 
-  private defaultEmptyStateMatcher(value: T): boolean {
-    return value === null || value === undefined || (value as unknown) === '';
+  private defaultEmptyStateMatcher(value: string): boolean {
+    return value === null || value === undefined || value === '';
   }
 }

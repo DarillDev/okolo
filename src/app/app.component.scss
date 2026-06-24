@@ -1,5 +1,79 @@
-ds-card {
-  height: 300px;
-  width: 300px;
-  margin: 200px auto;
+.demo {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--space-6) var(--space-16);
+  color: var(--c-ink);
+}
+
+.demo__title {
+  margin: 0 0 var(--space-8);
+  font-family: var(--font-display, var(--font-body));
+  font-size: var(--fs-xl, 24px);
+}
+
+.demo__section {
+  margin-bottom: var(--space-12);
+}
+
+.demo__h2 {
+  margin: 0 0 var(--space-5);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.demo__muted {
+  color: var(--c-ink-mute);
+  font-weight: 400;
+}
+
+.demo__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-6);
+}
+
+// Неон-подложка, чтобы blur/тень у appearance="glass" читались как поверх карты.
+.demo__grid--backdrop {
+  position: relative;
+  padding: var(--space-8);
+  border-radius: var(--radius-2xl);
+  background:
+    radial-gradient(600px 320px at 12% 8%, rgba(108, 185, 255, 0.22), transparent 60%),
+    radial-gradient(540px 300px at 88% 22%, rgba(180, 139, 255, 0.2), transparent 60%),
+    radial-gradient(520px 320px at 50% 100%, rgba(255, 123, 222, 0.16), transparent 62%),
+    var(--c-bg-2);
+}
+
+.demo__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.demo__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-6);
+
+  ds-form-field {
+    flex: 1 1 220px;
+  }
+}
+
+.demo__tag {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-ink-dim);
+}
+
+.demo__kbd {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  background: var(--c-glass-fill);
+  border: 1px solid var(--c-line);
+  color: var(--c-ink-mute);
 }
