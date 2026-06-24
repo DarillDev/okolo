@@ -1,0 +1,47 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ds-form-field__wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  cursor: text;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+
+  &:focus-within {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
+
+  &--disabled {
+    background: #f9fafb;
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+.ds-form-field__prefix,
+.ds-form-field__suffix {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ds-form-field__hint {
+  font-size: 12px;
+  color: #9ca3af;
+
+  &--error {
+    color: #ef4444;
+  }
+}
